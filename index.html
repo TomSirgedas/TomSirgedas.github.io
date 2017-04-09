@@ -13,9 +13,9 @@
     svg text {
         pointer-events: none;
         -webkit-user-select: none;
-           -moz-user-select: none;
+/*           -moz-user-select: none;
             -ms-user-select: none;
-                user-select: none;
+                user-select: none;*/
     }
     .line
     {
@@ -333,6 +333,8 @@
         Widget.call( this ); // call parent constructor     
         this.observer = observer
         this.svgElement = document.createElementNS("http://www.w3.org/2000/svg", 'circle');
+		if ( !window.navigator.userAgent.match("CriOS") )
+			this.svgElement.setAttribute( "r", 20 );
         this.svgElement.setAttribute( "class", "vertex" );
         this.setPos( pos );
         //this.setRadius( 20 );

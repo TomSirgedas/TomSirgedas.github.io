@@ -80,7 +80,9 @@
   N=<input type="text" id="N" maxlength="3" size="3"/>
   <input type="button" onclick="controller.setN(document.getElementById('N').value)" value="Update" />  
   <br>
-  <input type="button" onclick="document.getElementById('trianglesString').value=controller.getTrianglesText()" value="Get triangles in text format:" /><textarea rows="1" cols="50" id="trianglesString"></textarea>
+  <input type="button" onclick="document.getElementById('trianglesString').value=controller.getTrianglesText()" value="Get triangles in text format:" />
+  <textarea rows="1" cols="50" id="trianglesString"></textarea>
+  <input type="button" onclick="controller.setTrianglesFromText(document.getElementById('trianglesString').value)" value="Load" />
   <br>
   <input type="checkbox" onclick="svg.setAttribute('height',checked?'100%':'600'); svg.setAttribute('width',checked?'100%':'600');">Big grid <i>(fit to browser width)</i></input>
   <br>  
@@ -877,7 +879,39 @@
             ret += (i?"; ":"") + this.triangles[i].str();
         return ret;
     }
-    
+    Controller.prototype.maxCoord = function()
+	{	
+		var ret = 0;
+        for ( var i = 0; i < this.vertices.length ; i++ ) 
+			ret = Math.max( Math.max( ret, this.vertices[i].pos.x ), this.vertices[i].pos.y );
+		return ret;
+	}
+    Controller.prototype.setTrianglesFromText = function( text )
+	{		
+		while ( this.vertices.length > 0 )
+			this.deleteVertexAndOrphans( this.vertices[0] );
+			
+		var re = /(\d+),(\d+):(\d+),(\d+):(\d+),(\d+)/g;
+		var m;
+
+		do {
+			m = re.exec(text);
+			if (m) {				
+				var vertexA = new VertexModel( this, new XY( parseInt(m[1]), parseInt(m[2]) ) );
+				var vertexB = new VertexModel( this, new XY( parseInt(m[3]), parseInt(m[4]) ) );
+				var vertexC = new VertexModel( this, new XY( parseInt(m[5]), parseInt(m[6]) ) );
+				new LineModel( this, vertexA, vertexB );
+				new LineModel( this, vertexB, vertexC );
+				new LineModel( this, vertexC, vertexA );
+				new TriangleModel( this, vertexA, vertexB, vertexC );
+				this.mergeIfOverlappingAnotherVertex( vertexA );
+				this.mergeIfOverlappingAnotherVertex( vertexB );
+				this.mergeIfOverlappingAnotherVertex( vertexC );
+			}
+		} while (m);
+		
+		this.setN( Math.max( 5, this.maxCoord() ) );
+	}
                 
     function onLoad() 
     {   

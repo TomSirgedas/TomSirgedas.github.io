@@ -76,7 +76,7 @@
     xmlns:xlink="http://www.w3.org/1999/xlink">
 </svg>
 
-<form name="set N">
+<form id="myform">
   N=<input type="text" id="N" maxlength="3" size="3"/>
   <input type="button" onclick="controller.setN(document.getElementById('N').value)" value="Update" />  
   <br>
@@ -333,8 +333,8 @@
         Widget.call( this ); // call parent constructor     
         this.observer = observer
         this.svgElement = document.createElementNS("http://www.w3.org/2000/svg", 'circle');
-		if ( !window.navigator.userAgent.match("CriOS") )
-			this.svgElement.setAttribute( "r", 20 );
+        if ( !window.navigator.userAgent.match("CriOS") )
+            this.svgElement.setAttribute( "r", 20 );
         this.svgElement.setAttribute( "class", "vertex" );
         this.setPos( pos );
         //this.setRadius( 20 );
@@ -888,6 +888,9 @@
         svg.onmousemove = function( evt ) { controller.onMouseMove( evt ); }
         document.body.onkeypress  = function( evt ) { controller.onKeyPress( evt ); }
         document.body.onkeydown   = function( evt ) { controller.onKeyDown( evt ); }    
+        
+        // prevent reloading the page when <enter> is hit in the text input!!
+        document.getElementById('myform').addEventListener('submit', function(e) { e.preventDefault(); }, false); 
     }
 
 </script>

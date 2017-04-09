@@ -5,69 +5,69 @@
   <title>HTML in SVG in HTML</title>
   <style type='text/css'>
     svg 
-	{ 
-		border: 1px solid black; 
-		background-color: beige;
-	}
-    svg div { border: 1px dotted blue; }	
-	svg text {
-		pointer-events: none;
-		-webkit-user-select: none;
-		   -moz-user-select: none;
-			-ms-user-select: none;
-				user-select: none;
-	}
-	.line
-	{
-		stroke: red;
-		stroke-width: 20; 
-	}
-	.line:hover
-	{
-		stroke-width: 30; 
-	}
-	.gridline { 
-		pointer-events: none;
-		stroke-width: 2; 
-		stroke: gray;
-	}
-	.vertex	{
-		fill: blue;
-		r: 20;
-	}
-	.vertex:hover {
-		r: 25;
-	}
-	.vertex.selected {
-		fill: orange;
-	}
-	.triangle {
-		fill: blue;
-		fill-opacity: .2;
-	}
-	.triangle:hover {
-		fill: blue;
-		fill-opacity: .25;
-	}
-	.triangle.selected {
-		fill: orange;	
-		fill-opacity: .8;
-	}
-	
-	/* why doesn't CSS on the text work? */
-	
-	.areatext {		
-		fill: black;
-		font-size: 100px;
-		font-weight: bold;
-		font-family: Calibri;
-		text-anchor: middle;
-		alignment-baseline: middle;
-	}
-	
+    { 
+        border: 1px solid black; 
+        background-color: beige;
+    }
+    svg div { border: 1px dotted blue; }    
+    svg text {
+        pointer-events: none;
+        -webkit-user-select: none;
+           -moz-user-select: none;
+            -ms-user-select: none;
+                user-select: none;
+    }
+    .line
+    {
+        stroke: red;
+        stroke-width: 20; 
+    }
+    .line:hover
+    {
+        stroke-width: 30; 
+    }
+    .gridline { 
+        pointer-events: none;
+        stroke-width: 2; 
+        stroke: gray;
+    }
+    .vertex {
+        fill: blue;
+        r: 20;
+    }
+    .vertex:hover {
+        r: 25;
+    }
+    .vertex.selected {
+        fill: orange;
+    }
+    .triangle {
+        fill: blue;
+        fill-opacity: .2;
+    }
+    .triangle:hover {
+        fill: blue;
+        fill-opacity: .25;
+    }
+    .triangle.selected {
+        fill: orange;   
+        fill-opacity: .8;
+    }
+    
+    /* why doesn't CSS on the text work? */
+    
+    .areatext {     
+        fill: black;
+        font-size: 100px;
+        font-weight: bold;
+        font-family: Calibri;
+        text-anchor: middle;
+        alignment-baseline: middle;
+    }
+    
   </style>
 </head>
-<body onload="onLoad()">	
+<body onload="onLoad()">    
 
 <h2>Triangle Packing</h2>
 
@@ -82,7 +82,7 @@
   <br>
   <input type="button" onclick="document.getElementById('trianglesString').value=controller.getTrianglesText()" value="Get triangles in text format:" /><textarea rows="1" cols="50" id="trianglesString"></textarea>
   <br>
-  <input type="checkbox" onclick="svg.setAttribute('height',checked?'100%':'600'); svg.setAttribute('width',checked?'100%':'600');">Big grid</input>
+  <input type="checkbox" onclick="svg.setAttribute('height',checked?'100%':'600'); svg.setAttribute('width',checked?'100%':'600');">Big grid <i>(fit to browser width)</i></input>
   <br>  
   <br>
   Instructions:
@@ -99,793 +99,793 @@
 </form>
 
 <script>
-	var svg = document.getElementsByTagName('svg')[0];
-	var vertexGroup;
-	var lineGroup;
-	var triangleGroup;
-	var areaLabelGroup;
-	
-	function XY( x, y ) 
-	{
-		if ( typeof(x) == 'XY' ) { x = x.x; y = x.y; }
-		this.x = x;
-		this.y = y;
-	}	
+    var svg = document.getElementsByTagName('svg')[0];
+    var vertexGroup;
+    var lineGroup;
+    var triangleGroup;
+    var areaLabelGroup;
+    
+    function XY( x, y ) 
+    {
+        if ( typeof(x) == 'XY' ) { x = x.x; y = x.y; }
+        this.x = x;
+        this.y = y;
+    }   
     XY.prototype.str = function() { return this.x + "," + this.y; }
-	XY.prototype.equals = function( rhs ) { return this.x == rhs.x && this.y == rhs.y; }
-	XY.prototype.length = function() { return Math.sqrt( this.x*this.x + this.y*this.y ); }	
-	XY.prototype.add = function( rhs ) { return new XY( this.x + rhs.x, this.y + rhs.y ); }
-	XY.prototype.sub = function( rhs ) { return new XY( this.x - rhs.x, this.y - rhs.y ); }
-	XY.prototype.dist = function( rhs ) { return this.sub( rhs ).length(); }
-	XY.prototype.mul = function( m ) { return new XY( this.x * m, this.y * m ); }
-	XY.prototype.div = function( m ) { return new XY( this.x / m, this.y / m ); }
-	XY.prototype.dot = function( rhs ) { return this.x * rhs.x, this.y * rhs.y; }	
-	
-	function same2( a0, a1, b0, b1 ) { return a0 == b0 && a1 == b1 || a0 == b1 && a1 == b0; }
-	function same3( a0, a1, a2, b0, b1, b2 )
-	{
-		if ( a0 == b0 ) return same2( a1, a2, b1, b2 );
-		if ( a0 == b1 ) return same2( a1, a2, b0, b2 );
-		if ( a0 == b2 ) return same2( a1, a2, b0, b1 );
-		return false;
-	}
-	function erasedFromArray( arr, value ) { return arr.filter( function( rhs ) { return !( value == rhs ); } ); }
-		
-	function clientToSVGSpace( pos ) {			
-		var p = svg.createSVGPoint();
-		p.x = pos.x;
-		p.y = pos.y;		
-		p = p.matrixTransform(svg.getScreenCTM().inverse());		
-		return new XY( p.x, p.y );
-	}
-	function evtToSVGSpace( evt ) {	
-		return clientToSVGSpace( new XY( evt.clientX, evt.clientY ) );
-	}
+    XY.prototype.equals = function( rhs ) { return this.x == rhs.x && this.y == rhs.y; }
+    XY.prototype.length = function() { return Math.sqrt( this.x*this.x + this.y*this.y ); } 
+    XY.prototype.add = function( rhs ) { return new XY( this.x + rhs.x, this.y + rhs.y ); }
+    XY.prototype.sub = function( rhs ) { return new XY( this.x - rhs.x, this.y - rhs.y ); }
+    XY.prototype.dist = function( rhs ) { return this.sub( rhs ).length(); }
+    XY.prototype.mul = function( m ) { return new XY( this.x * m, this.y * m ); }
+    XY.prototype.div = function( m ) { return new XY( this.x / m, this.y / m ); }
+    XY.prototype.dot = function( rhs ) { return this.x * rhs.x, this.y * rhs.y; }   
+    
+    function same2( a0, a1, b0, b1 ) { return a0 == b0 && a1 == b1 || a0 == b1 && a1 == b0; }
+    function same3( a0, a1, a2, b0, b1, b2 )
+    {
+        if ( a0 == b0 ) return same2( a1, a2, b1, b2 );
+        if ( a0 == b1 ) return same2( a1, a2, b0, b2 );
+        if ( a0 == b2 ) return same2( a1, a2, b0, b1 );
+        return false;
+    }
+    function erasedFromArray( arr, value ) { return arr.filter( function( rhs ) { return !( value == rhs ); } ); }
+        
+    function clientToSVGSpace( pos ) {          
+        var p = svg.createSVGPoint();
+        p.x = pos.x;
+        p.y = pos.y;        
+        p = p.matrixTransform(svg.getScreenCTM().inverse());        
+        return new XY( p.x, p.y );
+    }
+    function evtToSVGSpace( evt ) { 
+        return clientToSVGSpace( new XY( evt.clientX, evt.clientY ) );
+    }
 
-	function Widget()
-	{
-		this.svgElement = null;
-		this.positionObservers = [];
-	}
+    function Widget()
+    {
+        this.svgElement = null;
+        this.positionObservers = [];
+    }
     Widget.prototype.show = function() 
-	{ 	
-		if ( !this.svgGroup() )
-			return;
-		this.svgGroup().appendChild( this.svgElement );
-	}
+    {   
+        if ( !this.svgGroup() )
+            return;
+        this.svgGroup().appendChild( this.svgElement );
+    }
     Widget.prototype.hide = function() 
-	{ 
-		this.svgGroup().removeChild( this.svgElement );
-	}
+    { 
+        this.svgGroup().removeChild( this.svgElement );
+    }
     Widget.prototype.addEvents = function() 
-	{ 	
-		var thisWidget = this;
-		this.svgElement.addEventListener("mousedown", function(evt) { thisWidget.onMouseDown( evt ) }, false);
-	}
-	
-	
-	
-	LineWidget.prototype = new Widget();
-	LineWidget.prototype.constructor = LineWidget;
-	function LineWidget()
-	{
-		Widget.call( this ); // call parent constructor
-		this.svgElement = document.createElementNS("http://www.w3.org/2000/svg", 'line');
-		//this.setAB( new XY( 1000, 1000 ), new XY( 3000, 2000 ) );		
-		this.svgElement.setAttribute( "class", "line" );
-		this.show();
-	}
-	LineWidget.prototype.svgGroup = function() { return lineGroup; }
-	LineWidget.prototype.setA = function( pos )
-	{
-		this.svgElement.setAttribute( "x1", pos.x );
-		this.svgElement.setAttribute( "y1", pos.y );
-	}
-	LineWidget.prototype.setB = function( pos )
-	{
-		this.svgElement.setAttribute( "x2", pos.x );
-		this.svgElement.setAttribute( "y2", pos.y );
-	}
-	LineWidget.prototype.setAB = function( ptA, ptB )
-	{
-		this.setA( ptA );
-		this.setB( ptB );
-	}
-	
-	
-	
-	
-	TextWidget.prototype = new Widget();
-	TextWidget.prototype.constructor = TextWidget;
-	function TextWidget()
-	{
-		Widget.call( this ); // call parent constructor
-		this.svgElement = document.createElementNS("http://www.w3.org/2000/svg", 'text');
-		//this.setPos( new XY( 200, 200 ) );
-		this.svgElement.setAttribute( "class", "areatext" );
-		this.svgElement.textContent = 123456789;
-		this.show();
-	}
-	TextWidget.prototype.svgGroup = function() { return areaLabelGroup; }
-	TextWidget.prototype.setPos = function( pos )
-	{
-		this.svgElement.setAttribute( "x", pos.x );
-		this.svgElement.setAttribute( "y", pos.y );
-	}
-	TextWidget.prototype.setText = function( text )
-	{
-		this.svgElement.textContent = text;
-	}
-	
-	
-	LatticeLineWidget.prototype = new LineWidget();
-	LatticeLineWidget.prototype.constructor = LatticeLineWidget;
-	function LatticeLineWidget( ptA, ptB )
-	{
-		LineWidget.call( this );		
-		this.setAB( ptA, ptB );
-		this.svgElement.setAttribute( "class", "gridline" );
-	}
-	
-	
-	LineConnectionWidget.prototype = new LineWidget();
-	LineConnectionWidget.prototype.constructor = LineConnectionWidget;
-	function LineConnectionWidget( observer )
-	{	
-		LineWidget.call( this );
-		this.observer = observer;
-		this.addEvents();
-	}
-	LineConnectionWidget.prototype.onNewPositionFor = function( obj ) { this.updatePos(); }
+    {   
+        var thisWidget = this;
+        this.svgElement.addEventListener("mousedown", function(evt) { thisWidget.onMouseDown( evt ) }, false);
+    }
+    
+    
+    
+    LineWidget.prototype = new Widget();
+    LineWidget.prototype.constructor = LineWidget;
+    function LineWidget()
+    {
+        Widget.call( this ); // call parent constructor
+        this.svgElement = document.createElementNS("http://www.w3.org/2000/svg", 'line');
+        //this.setAB( new XY( 1000, 1000 ), new XY( 3000, 2000 ) );     
+        this.svgElement.setAttribute( "class", "line" );
+        this.show();
+    }
+    LineWidget.prototype.svgGroup = function() { return lineGroup; }
+    LineWidget.prototype.setA = function( pos )
+    {
+        this.svgElement.setAttribute( "x1", pos.x );
+        this.svgElement.setAttribute( "y1", pos.y );
+    }
+    LineWidget.prototype.setB = function( pos )
+    {
+        this.svgElement.setAttribute( "x2", pos.x );
+        this.svgElement.setAttribute( "y2", pos.y );
+    }
+    LineWidget.prototype.setAB = function( ptA, ptB )
+    {
+        this.setA( ptA );
+        this.setB( ptB );
+    }
+    
+    
+    
+    
+    TextWidget.prototype = new Widget();
+    TextWidget.prototype.constructor = TextWidget;
+    function TextWidget()
+    {
+        Widget.call( this ); // call parent constructor
+        this.svgElement = document.createElementNS("http://www.w3.org/2000/svg", 'text');
+        //this.setPos( new XY( 200, 200 ) );
+        this.svgElement.setAttribute( "class", "areatext" );
+        this.svgElement.textContent = 123456789;
+        this.show();
+    }
+    TextWidget.prototype.svgGroup = function() { return areaLabelGroup; }
+    TextWidget.prototype.setPos = function( pos )
+    {
+        this.svgElement.setAttribute( "x", pos.x );
+        this.svgElement.setAttribute( "y", pos.y );
+    }
+    TextWidget.prototype.setText = function( text )
+    {
+        this.svgElement.textContent = text;
+    }
+    
+    
+    LatticeLineWidget.prototype = new LineWidget();
+    LatticeLineWidget.prototype.constructor = LatticeLineWidget;
+    function LatticeLineWidget( ptA, ptB )
+    {
+        LineWidget.call( this );        
+        this.setAB( ptA, ptB );
+        this.svgElement.setAttribute( "class", "gridline" );
+    }
+    
+    
+    LineConnectionWidget.prototype = new LineWidget();
+    LineConnectionWidget.prototype.constructor = LineConnectionWidget;
+    function LineConnectionWidget( observer )
+    {   
+        LineWidget.call( this );
+        this.observer = observer;
+        this.addEvents();
+    }
+    LineConnectionWidget.prototype.onNewPositionFor = function( obj ) { this.updatePos(); }
     LineConnectionWidget.prototype.onMouseDown = function(evt) 
-	{ 	
-		this.observer.onBeginDragLine( this, evt );
-	}
-	
-	
-	TriangleWidget.prototype = new Widget();
-	TriangleWidget.prototype.constructor = TriangleWidget;
-	function TriangleWidget()
-	{
-		Widget.call( this ); // call parent constructor
-		this.svgElement = document.createElementNS("http://www.w3.org/2000/svg", 'polygon');
-		//this.svgElement.style.fill = "blue"; 
-		//this.svgElement.style.fillOpacity = .2; 
-		this.isMouseOver = false;
-		this.isSelected = false;
-		this.show();
-		this.addEvents();
-	}
-	TriangleWidget.prototype.svgGroup = function() { return triangleGroup; }
-	TriangleWidget.prototype.setABC = function( posA, posB, posC )
-	{	
-		this.svgElement.setAttribute( "points", posA.str() + " " + posB.str() + " " + posC.str() );
-	}
-	
-	
-	TriangleConnectionWidget.prototype = new TriangleWidget();
-	TriangleConnectionWidget.prototype.constructor = TriangleConnectionWidget;
-	function TriangleConnectionWidget( observer )
-	{
-		this.observer = observer;
-		this.updateUI();		
-		
-		TriangleWidget.call( this );
-		this.svgElement.setAttribute( "class", "triangle" );
-		
-		this.textWidget = new TextWidget();
-	}		
-	TriangleConnectionWidget.prototype.onNewPositionFor = function( obj ) { this.updatePos(); }
+    {   
+        this.observer.onBeginDragLine( this, evt );
+    }
+    
+    
+    TriangleWidget.prototype = new Widget();
+    TriangleWidget.prototype.constructor = TriangleWidget;
+    function TriangleWidget()
+    {
+        Widget.call( this ); // call parent constructor
+        this.svgElement = document.createElementNS("http://www.w3.org/2000/svg", 'polygon');
+        //this.svgElement.style.fill = "blue"; 
+        //this.svgElement.style.fillOpacity = .2; 
+        this.isMouseOver = false;
+        this.isSelected = false;
+        this.show();
+        this.addEvents();
+    }
+    TriangleWidget.prototype.svgGroup = function() { return triangleGroup; }
+    TriangleWidget.prototype.setABC = function( posA, posB, posC )
+    {   
+        this.svgElement.setAttribute( "points", posA.str() + " " + posB.str() + " " + posC.str() );
+    }
+    
+    
+    TriangleConnectionWidget.prototype = new TriangleWidget();
+    TriangleConnectionWidget.prototype.constructor = TriangleConnectionWidget;
+    function TriangleConnectionWidget( observer )
+    {
+        this.observer = observer;
+        this.updateUI();        
+        
+        TriangleWidget.call( this );
+        this.svgElement.setAttribute( "class", "triangle" );
+        
+        this.textWidget = new TextWidget();
+    }       
+    TriangleConnectionWidget.prototype.onNewPositionFor = function( obj ) { this.updatePos(); }
     TriangleConnectionWidget.prototype.onMouseEnter = function(evt) 
-	{ 	
-		this.isMouseOver = true;
-		this.updateUI();
-	}
+    {   
+        this.isMouseOver = true;
+        this.updateUI();
+    }
     TriangleConnectionWidget.prototype.onMouseLeave = function(evt) 
-	{ 			
-		this.isMouseOver = false;
-		this.updateUI();
-	}    
-	TriangleConnectionWidget.prototype.onMouseDown = function(evt) 
-	{ 	
-		this.observer.onClick( evt );
-	}	
-	TriangleConnectionWidget.prototype.setABC = function( posA, posB, posC )
-	{	
-		TriangleWidget.prototype.setABC.call( this, posA, posB, posC ); // call base class
-			
-		var posAvg = posA.add( posB ).add( posC ).mul( 1./3 );
-		
-		var lenA = posB.dist( posC );
-		var lenB = posC.dist( posA );
-		var lenC = posA.dist( posB );
-		var incenter = posA.mul( lenA ).add( posB.mul( lenB ) ).add( posC.mul( lenC ) ).div( lenA + lenB + lenC );
-		
-		var comboCenter = posAvg.mul( .3 ).add( incenter.mul( .7 ) );
-		
-		this.textWidget.setPos( comboCenter );
-	}
-	TriangleConnectionWidget.prototype.hide = function()
-	{	
-		Widget.prototype.hide.call( this ); // call base class
-		this.textWidget.hide();
-	}	
-	TriangleConnectionWidget.prototype.setDoubleArea = function( doubleArea )
-	{	
-		this.textWidget.setText( doubleArea );
-	}
+    {           
+        this.isMouseOver = false;
+        this.updateUI();
+    }    
+    TriangleConnectionWidget.prototype.onMouseDown = function(evt) 
+    {   
+        this.observer.onClick( evt );
+    }   
+    TriangleConnectionWidget.prototype.setABC = function( posA, posB, posC )
+    {   
+        TriangleWidget.prototype.setABC.call( this, posA, posB, posC ); // call base class
+            
+        var posAvg = posA.add( posB ).add( posC ).mul( 1./3 );
+        
+        var lenA = posB.dist( posC );
+        var lenB = posC.dist( posA );
+        var lenC = posA.dist( posB );
+        var incenter = posA.mul( lenA ).add( posB.mul( lenB ) ).add( posC.mul( lenC ) ).div( lenA + lenB + lenC );
+        
+        var comboCenter = posAvg.mul( .3 ).add( incenter.mul( .7 ) );
+        
+        this.textWidget.setPos( comboCenter );
+    }
+    TriangleConnectionWidget.prototype.hide = function()
+    {   
+        Widget.prototype.hide.call( this ); // call base class
+        this.textWidget.hide();
+    }   
+    TriangleConnectionWidget.prototype.setDoubleArea = function( doubleArea )
+    {   
+        this.textWidget.setText( doubleArea );
+    }
     TriangleConnectionWidget.prototype.setSelected = function( isSelected ) 
-	{ 	
-		this.isSelected = isSelected;
-		this.updateUI();
-	}
-	TriangleConnectionWidget.prototype.updateUI = function()
-	{		
-		this.svgElement.setAttribute( "class", this.isSelected ? "triangle selected" : "triangle" );
-		//this.svgElement.style.fillOpacity = this.isSelected ? .8 : this.isMouseOver ? .25 : .2;
-	}
-	
-	
-	VertexWidget.prototype = new Widget();
-	VertexWidget.prototype.constructor = VertexWidget;
-	function VertexWidget( observer, pos )
-	{
-		Widget.call( this ); // call parent constructor		
-		this.observer = observer
-		this.svgElement = document.createElementNS("http://www.w3.org/2000/svg", 'circle');
-		this.svgElement.setAttribute( "class", "vertex" );
-		this.setPos( pos );
-		//this.setRadius( 20 );
-		//this.svgElement.style.fill = "green"; 
-		this.show();
-		this.addEvents();
-	}
-	VertexWidget.prototype.svgGroup = function() { return vertexGroup; }
-	VertexWidget.prototype.setPos = function( pos ) 
-	{ 
-		this.svgElement.setAttribute( "cx", pos.x ); 
-		this.svgElement.setAttribute( "cy", pos.y );
-	}
-	//VertexWidget.prototype.setRadius = function( r ) { this.svgElement.setAttribute( "r", r ); }
+    {   
+        this.isSelected = isSelected;
+        this.updateUI();
+    }
+    TriangleConnectionWidget.prototype.updateUI = function()
+    {       
+        this.svgElement.setAttribute( "class", this.isSelected ? "triangle selected" : "triangle" );
+        //this.svgElement.style.fillOpacity = this.isSelected ? .8 : this.isMouseOver ? .25 : .2;
+    }
+    
+    
+    VertexWidget.prototype = new Widget();
+    VertexWidget.prototype.constructor = VertexWidget;
+    function VertexWidget( observer, pos )
+    {
+        Widget.call( this ); // call parent constructor     
+        this.observer = observer
+        this.svgElement = document.createElementNS("http://www.w3.org/2000/svg", 'circle');
+        this.svgElement.setAttribute( "class", "vertex" );
+        this.setPos( pos );
+        //this.setRadius( 20 );
+        //this.svgElement.style.fill = "green"; 
+        this.show();
+        this.addEvents();
+    }
+    VertexWidget.prototype.svgGroup = function() { return vertexGroup; }
+    VertexWidget.prototype.setPos = function( pos ) 
+    { 
+        this.svgElement.setAttribute( "cx", pos.x ); 
+        this.svgElement.setAttribute( "cy", pos.y );
+    }
+    //VertexWidget.prototype.setRadius = function( r ) { this.svgElement.setAttribute( "r", r ); }
     VertexWidget.prototype.onMouseDown = function(evt) 
-	{ 	
-		this.observer.onDragBegin();
-	}
+    {   
+        this.observer.onDragBegin();
+    }
     VertexWidget.prototype.onMouseEnter = function(evt) 
-	{ 	
-		//this.setRadius( 25 );
-	}
+    {   
+        //this.setRadius( 25 );
+    }
     VertexWidget.prototype.onMouseLeave = function(evt) 
-	{ 		
-		//this.setRadius( 20 );
-	}
+    {       
+        //this.setRadius( 20 );
+    }
     VertexWidget.prototype.onDrag = function( pos ) 
-	{ 			
-		this.observer.onDrag( pos );
-	}
+    {           
+        this.observer.onDrag( pos );
+    }
     VertexWidget.prototype.setSelected = function( isSelected ) 
-	{ 	
-		var className = this.svgElement.getAttribute( "class" );
-		this.svgElement.setAttribute( "class", isSelected ? "vertex selected" : "vertex" );
-		//this.svgElement.style.fill = isSelected ? "orange" : "green"; 
-		
-	}
-		
-	function Lattice()
-	{
-		this.setN( 5 );
-	}
+    {   
+        var className = this.svgElement.getAttribute( "class" );
+        this.svgElement.setAttribute( "class", isSelected ? "vertex selected" : "vertex" );
+        //this.svgElement.style.fill = isSelected ? "orange" : "green"; 
+        
+    }
+        
+    function Lattice()
+    {
+        this.setN( 5 );
+    }
     Lattice.prototype.setN = function( n ) { 
-		this.offset = new XY( 200, 200 );
-		this.N = n;
-		this.cellSize = 2600 / this.N;
-		
-		document.getElementById('N').value = this.N;
-	}
+        this.offset = new XY( 200, 200 );
+        this.N = n;
+        this.cellSize = 2600 / this.N;
+        
+        document.getElementById('N').value = this.N;
+    }
     Lattice.prototype.toLatticeSpace = function( svgPos ) { 
-		var x = ( svgPos.x - this.offset.x ) / this.cellSize;
-		var y = ( svgPos.y - this.offset.y ) / this.cellSize;
-		return new XY( x, y );
-	};
+        var x = ( svgPos.x - this.offset.x ) / this.cellSize;
+        var y = ( svgPos.y - this.offset.y ) / this.cellSize;
+        return new XY( x, y );
+    };
     Lattice.prototype.toSVGSpace = function( latticePos ) { 
-		var x = latticePos.x * this.cellSize + this.offset.x;
-		var y = latticePos.y * this.cellSize + this.offset.y;
-		return new XY( x, y );
-	};
+        var x = latticePos.x * this.cellSize + this.offset.x;
+        var y = latticePos.y * this.cellSize + this.offset.y;
+        return new XY( x, y );
+    };
     Lattice.prototype.toNearestLatticePoint = function( svgPos ) { 
-		var ret = this.toLatticeSpace( svgPos );
-		ret.x = Math.round( ret.x );
-		ret.y = Math.round( ret.y );
-		return ret;
-	};
-	
-	function LatticeWidget( lattice )
-	{
-		this.lineWidgets = [];	
-		this.updateUI();
-	}
-	LatticeWidget.prototype.updateUI = function()
-	{
-		for ( var i = 0; i < this.lineWidgets.length; i++ )
-			this.lineWidgets[i].hide();
-		this.lineWidgets = [];	
-		
-		for ( var i = 0; i <= lattice.N; i++ )
-		{
-			this.lineWidgets.push( new LatticeLineWidget( lattice.toSVGSpace( new XY( 0, i ) ), lattice.toSVGSpace( new XY( lattice.N, i ) ) ) );
-			this.lineWidgets.push( new LatticeLineWidget( lattice.toSVGSpace( new XY( i, 0 ) ), lattice.toSVGSpace( new XY( i, lattice.N ) ) ) );
-		}
-	}
-	
-	var lattice;
-	var latticeWidget;
-	var controller;	
-	
-	function VertexModel( observer, pos )
-	{		
-		this.observer = observer;
-		this.observers = [];
-		this.widget = new VertexWidget( this, lattice.toSVGSpace( pos ) );
-		this.setPos( pos );	
-		this.observer.onVertexAdded( this );
-	}
-	VertexModel.prototype.destroy = function()
-	{
-		this.observers = [];
-		this.widget.hide();
-		this.widget = null;
-		this.observer.onVertexDeleted( this );
-		this.observer = null;
-	}
-	VertexModel.prototype.setPos = function( pos )
-	{
-		this.pos = pos;
-		for ( var i = 0; i < this.observers.length; i++ )
-			this.observers[i].onVertexMoved( this );
-		this.updateUI();		
-	}	
-	VertexModel.prototype.onDragBegin = function()
-	{
-		this.observer.onDragBegin( this );
-	}
-	VertexModel.prototype.onDragEnd = function()
-	{
-		this.observer.onDragEnd( this );
-	}
-	VertexModel.prototype.onDrag = function( pos )
-	{
-		this.setPos( lattice.toNearestLatticePoint( pos ) );
-	}
-	VertexModel.prototype.updateUI = function()
-	{		
-		this.widget.setPos( lattice.toSVGSpace( this.pos ) );
-	}
-	VertexModel.prototype.setSelected = function( isSelected )
-	{
-		this.widget.setSelected( isSelected );
-	}
-	VertexModel.prototype.str = function( isSelected )
-	{
-		return this.pos.str();
-	}
-	
-	function LineModel( observer, vertexA, vertexB )
-	{		
-		this.observer = observer;
-		this.vertexA = vertexA;
-		this.vertexB = vertexB;
-		this.vertexA.observers.push( this );
-		this.vertexB.observers.push( this );
-		this.widget = new LineConnectionWidget( this );
-		this.updateUI();
-		this.observer.onLineAdded( this );
-	}
-	LineModel.prototype.destroy = function()
-	{
-		this.vertexA.observers = erasedFromArray( this.vertexA.observers, this );
-		this.vertexB.observers = erasedFromArray( this.vertexB.observers, this );
-		this.widget.hide();
-		this.widget = null;
-		this.observer.onLineDeleted( this );		
-		this.vertexA = null;
-		this.vertexB = null;
-		this.observer = null;
-	}
-	LineModel.prototype.onVertexMoved = function( vertex )
-	{
-		this.updateUI();
-	}
-	LineModel.prototype.updateUI = function()
-	{		
-		this.widget.setAB( lattice.toSVGSpace( this.vertexA.pos ), lattice.toSVGSpace( this.vertexB.pos ) );
-	}
-	LineModel.prototype.onBeginDragLine = function( lineConnectionWidget, evt )
-	{
-		this.observer.onBeginDragLine( this, evt );
-	}
-	LineModel.prototype.replaceVertexWith = function( vertexOld, vertexNew )
-	{
-		if ( this.vertexA === vertexOld ) this.vertexA = vertexNew;
-		if ( this.vertexB === vertexOld ) this.vertexB = vertexNew;
-	}
-	LineModel.prototype.equals = function( line )
-	{
-		return same2( this.vertexA, this.vertexB, line.vertexA, line.vertexB );
-	}
-	LineModel.prototype.isDegenerate = function()
-	{
-		return this.vertexA == this.vertexB;
-	}
-	
-	
-	function TriangleModel( observer, vertexA, vertexB, vertexC )
-	{
-		this.observer = observer;
-		this.vertexA = vertexA;
-		this.vertexB = vertexB;
-		this.vertexC = vertexC;
-		this.vertexA.observers.push( this );
-		this.vertexB.observers.push( this );
-		this.vertexC.observers.push( this );
-		this.widget = new TriangleConnectionWidget( this );
-		this.updateUI();	
-		this.observer.onTriangleAdded( this );
-	}
-	TriangleModel.prototype.destroy = function()
-	{
-		this.vertexA.observers = erasedFromArray( this.vertexA.observers, this );
-		this.vertexB.observers = erasedFromArray( this.vertexB.observers, this );
-		this.vertexC.observers = erasedFromArray( this.vertexC.observers, this );
-		this.widget.hide();
-		this.widget = null;
-		this.observer.onTriangleDeleted( this );		
-		this.vertexA = null;
-		this.vertexB = null;
-		this.vertexC = null;
-		this.observer = null;
-	}
-	TriangleModel.prototype.onVertexMoved = function( vertex )
-	{
-		this.updateUI();
-	}
-	TriangleModel.prototype.doubleArea = function()
-	{
-		var x0 = this.vertexB.pos.x - this.vertexA.pos.x;
-		var y0 = this.vertexB.pos.y - this.vertexA.pos.y;
-		var x1 = this.vertexC.pos.x - this.vertexA.pos.x;
-		var y1 = this.vertexC.pos.y - this.vertexA.pos.y;
-		return Math.abs( x0*y1 - x1*y0 );
-	}
-	TriangleModel.prototype.updateUI = function()
-	{		
-		var posA = lattice.toSVGSpace( this.vertexA.pos );
-		var posB = lattice.toSVGSpace( this.vertexB.pos );
-		var posC = lattice.toSVGSpace( this.vertexC.pos );
-		this.widget.setABC( posA, posB, posC );
-		this.widget.setDoubleArea( this.doubleArea() );
-	}
-	TriangleModel.prototype.onClick = function( evt )
-	{
-		this.observer.onClickTriangle( this );
-	}	
-	TriangleModel.prototype.setSelected = function( isSelected )
-	{
-		this.widget.setSelected( isSelected );
-	}
-	TriangleModel.prototype.replaceVertexWith = function( vertexOld, vertexNew )
-	{
-		if ( this.vertexA === vertexOld ) this.vertexA = vertexNew;
-		if ( this.vertexB === vertexOld ) this.vertexB = vertexNew;
-		if ( this.vertexC === vertexOld ) this.vertexC = vertexNew;
-	}
-	TriangleModel.prototype.equals = function( triangle )
-	{
-		return same3( this.vertexA, this.vertexB, this.vertexC, triangle.vertexA, triangle.vertexB, triangle.vertexC );
-	}
-	TriangleModel.prototype.isDegenerate = function()
-	{
-		return this.vertexA == this.vertexB
-		    || this.vertexB == this.vertexC
-		    || this.vertexC == this.vertexA;
-	}
-	TriangleModel.prototype.str = function()
-	{
-		return this.vertexA.str() + ":" + this.vertexB.str() + ":" + this.vertexC.str();
-	}
-	
-	
-	
-	function Controller()
-	{
-		lattice = new Lattice();
-		
-		// create SVG groups for correct Z-ordering
-		vertexGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");	
-		lineGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");	
-		triangleGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-		areaLabelGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");	
-		svg.appendChild( triangleGroup );	
-		svg.appendChild( lineGroup );
-		svg.appendChild( areaLabelGroup );
-		svg.appendChild( vertexGroup );
-				
-		this.latticeWidget = new LatticeWidget( lattice );		
-		this.vertices = [];
-		this.lines = [];
-		this.triangles = [];
-		this.selection = [];
-		this.dragObject = null;
-		this.mouseDownWasAlreadyHandled = false;
-		
-		var vertexA = new VertexModel( this, new XY( 1, 0 ) );
-		var vertexB = new VertexModel( this, new XY( 4, 3 ) );
-		var vertexC = new VertexModel( this, new XY( 0, 5 ) );
-		new LineModel( this, vertexA, vertexB );
-		new LineModel( this, vertexB, vertexC );
-		new LineModel( this, vertexC, vertexA );
-		new TriangleModel( this, vertexA, vertexB, vertexC );
-	}
-	Controller.prototype.onVertexAdded 		= function( vertex ) 	{ this.vertices.push( vertex ); }
-	Controller.prototype.onLineAdded 		= function( line ) 		{ this.lines.push( line ); }
-	Controller.prototype.onTriangleAdded 	= function( triangle ) 	{ this.triangles.push( triangle ); }
-	Controller.prototype.onVertexDeleted 	= function( vertex ) 	{ this.vertices  = erasedFromArray( this.vertices , vertex ); }
-	Controller.prototype.onLineDeleted 		= function( line ) 		{ this.lines 	 = erasedFromArray( this.lines    , line ); }
-	Controller.prototype.onTriangleDeleted 	= function( triangle ) 	{ this.triangles = erasedFromArray( this.triangles, triangle ); }
-	Controller.prototype.onDragBegin = function( vertex )
-	{
-		this.dragObject = vertex;		
-		
-		this.setSelection( [vertex] );
-	}
-	Controller.prototype.onDragEnd = function( vertex )
-	{
-		this.mergeIfOverlappingAnotherVertex( vertex );
-	
-		this.dragObject = null;
-	}	
-	Controller.prototype.onBeginDragLine = function( lineModel, evt )
-	{		
-		var newVertex = new VertexModel( this, new XY( 0, 0 ) );
-		
-		var lineA = new LineModel( this, lineModel.vertexA, newVertex );
-		var lineB = new LineModel( this, lineModel.vertexB, newVertex );
-	    
-		var newTriangle = new TriangleModel( this, lineModel.vertexA, lineModel.vertexB, newVertex );
-				
-		this.dragObject = newVertex;
-		this.setSelection( [newVertex] );
-		this.onMouseMove( evt );
-	}
-	Controller.prototype.onClickTriangle = function( triangle )
-	{
-		this.mouseDownWasAlreadyHandled = true; // so that our "global" mousedown doesn't trigger
-		this.setSelection( [triangle] );
-	}
-	Controller.prototype.setSelection = function( selection )
-	{
-		for ( var i = 0; i < this.selection.length; i++ )
-			this.selection[i].setSelected( false );
-			
-		this.selection = selection;
-		
-		for ( var i = 0; i < this.selection.length; i++ )
-			this.selection[i].setSelected( true );
-	}	
-	Controller.prototype.mergeIfOverlappingAnotherVertex = function( vertex )
-	{
-		for ( var i = 0; i < this.vertices.length; i++ )
-			if ( !(vertex === this.vertices[i]) && this.vertices[i].pos.equals( vertex.pos ) )
-				this.merge( vertex, this.vertices[i] );
-	}
-	Controller.prototype.isDuplicateLine = function( line )
-	{		
-		for ( var i = 0; i < this.lines.length; i++ ) if ( !(this.lines[i] === line) )
-			if ( this.lines[i].equals( line ) )
-				return true;
-		return false;
-	}
-	Controller.prototype.isDuplicateTriangle = function( triangle )
-	{		
-		for ( var i = 0; i < this.triangles.length; i++ ) if ( !(this.triangles[i] === triangle) )
-			if ( this.triangles[i].equals( triangle ) )
-				return true;
-		return false;
-	}	
-	Controller.prototype.isDuplicate = function( obj )
-	{
-		return ( obj instanceof LineModel )     && this.isDuplicateLine( obj )
-		    || ( obj instanceof TriangleModel ) && this.isDuplicateTriangle( obj );
-	}
-	Controller.prototype.merge = function( vertexA, vertexB )
-	{
-		this.setSelection( [] );
-	
-		if ( !vertexA.pos.equals( vertexB.pos ) )
-			console.info( "merge error!" );
-			
-		console.info( "merging" );
-			
-		for ( var i = 0; i < vertexB.observers.length; i++ )
-		{
-			var obj = vertexB.observers[i];
-			obj.replaceVertexWith( vertexB, vertexA );	// replace B with A for all lines & triangles
-			if ( obj.isDegenerate() || this.isDuplicate( obj ) )
-			{
-				obj.destroy();
-				continue;
-			}
-			
-			vertexA.observers.push( vertexB.observers[i] ); 			// and transfer observers
-		}
-		vertexB.destroy();
-		
-		this.deleteVertexIfOrphan( vertexA );
-		
-		//console.info("#vertices="+this.vertices.length);
-		//console.info("#lines="+this.lines.length);
-		//console.info("#triangles="+this.triangles.length);
-		//for ( var i = 0; i < this.vertices.length; i++ )
-		//	console.info("#obs="+this.vertices[i].observers.length);
-	}
-	Controller.prototype.lineWith = function( vertexA, vertexB )
-	{		
-		for ( var i = 0; i < this.lines.length; i++ )
-			if ( same2( this.lines[i].vertexA, this.lines[i].vertexB, vertexA, vertexB ) )
-				return this.lines[i];
-		return null;
-	}
-	Controller.prototype.trianglesWith2 = function( vertexA, vertexB )
-	{		
-		var ret = [];
-		for ( var i = 0; i < this.triangles.length; i++ )
-			if ( same2( this.triangles[i].vertexA, this.triangles[i].vertexB, vertexA, vertexB )
+        var ret = this.toLatticeSpace( svgPos );
+        ret.x = Math.round( ret.x );
+        ret.y = Math.round( ret.y );
+        return ret;
+    };
+    
+    function LatticeWidget( lattice )
+    {
+        this.lineWidgets = [];  
+        this.updateUI();
+    }
+    LatticeWidget.prototype.updateUI = function()
+    {
+        for ( var i = 0; i < this.lineWidgets.length; i++ )
+            this.lineWidgets[i].hide();
+        this.lineWidgets = [];  
+        
+        for ( var i = 0; i <= lattice.N; i++ )
+        {
+            this.lineWidgets.push( new LatticeLineWidget( lattice.toSVGSpace( new XY( 0, i ) ), lattice.toSVGSpace( new XY( lattice.N, i ) ) ) );
+            this.lineWidgets.push( new LatticeLineWidget( lattice.toSVGSpace( new XY( i, 0 ) ), lattice.toSVGSpace( new XY( i, lattice.N ) ) ) );
+        }
+    }
+    
+    var lattice;
+    var latticeWidget;
+    var controller; 
+    
+    function VertexModel( observer, pos )
+    {       
+        this.observer = observer;
+        this.observers = [];
+        this.widget = new VertexWidget( this, lattice.toSVGSpace( pos ) );
+        this.setPos( pos ); 
+        this.observer.onVertexAdded( this );
+    }
+    VertexModel.prototype.destroy = function()
+    {
+        this.observers = [];
+        this.widget.hide();
+        this.widget = null;
+        this.observer.onVertexDeleted( this );
+        this.observer = null;
+    }
+    VertexModel.prototype.setPos = function( pos )
+    {
+        this.pos = pos;
+        for ( var i = 0; i < this.observers.length; i++ )
+            this.observers[i].onVertexMoved( this );
+        this.updateUI();        
+    }   
+    VertexModel.prototype.onDragBegin = function()
+    {
+        this.observer.onDragBegin( this );
+    }
+    VertexModel.prototype.onDragEnd = function()
+    {
+        this.observer.onDragEnd( this );
+    }
+    VertexModel.prototype.onDrag = function( pos )
+    {
+        this.setPos( lattice.toNearestLatticePoint( pos ) );
+    }
+    VertexModel.prototype.updateUI = function()
+    {       
+        this.widget.setPos( lattice.toSVGSpace( this.pos ) );
+    }
+    VertexModel.prototype.setSelected = function( isSelected )
+    {
+        this.widget.setSelected( isSelected );
+    }
+    VertexModel.prototype.str = function( isSelected )
+    {
+        return this.pos.str();
+    }
+    
+    function LineModel( observer, vertexA, vertexB )
+    {       
+        this.observer = observer;
+        this.vertexA = vertexA;
+        this.vertexB = vertexB;
+        this.vertexA.observers.push( this );
+        this.vertexB.observers.push( this );
+        this.widget = new LineConnectionWidget( this );
+        this.updateUI();
+        this.observer.onLineAdded( this );
+    }
+    LineModel.prototype.destroy = function()
+    {
+        this.vertexA.observers = erasedFromArray( this.vertexA.observers, this );
+        this.vertexB.observers = erasedFromArray( this.vertexB.observers, this );
+        this.widget.hide();
+        this.widget = null;
+        this.observer.onLineDeleted( this );        
+        this.vertexA = null;
+        this.vertexB = null;
+        this.observer = null;
+    }
+    LineModel.prototype.onVertexMoved = function( vertex )
+    {
+        this.updateUI();
+    }
+    LineModel.prototype.updateUI = function()
+    {       
+        this.widget.setAB( lattice.toSVGSpace( this.vertexA.pos ), lattice.toSVGSpace( this.vertexB.pos ) );
+    }
+    LineModel.prototype.onBeginDragLine = function( lineConnectionWidget, evt )
+    {
+        this.observer.onBeginDragLine( this, evt );
+    }
+    LineModel.prototype.replaceVertexWith = function( vertexOld, vertexNew )
+    {
+        if ( this.vertexA === vertexOld ) this.vertexA = vertexNew;
+        if ( this.vertexB === vertexOld ) this.vertexB = vertexNew;
+    }
+    LineModel.prototype.equals = function( line )
+    {
+        return same2( this.vertexA, this.vertexB, line.vertexA, line.vertexB );
+    }
+    LineModel.prototype.isDegenerate = function()
+    {
+        return this.vertexA == this.vertexB;
+    }
+    
+    
+    function TriangleModel( observer, vertexA, vertexB, vertexC )
+    {
+        this.observer = observer;
+        this.vertexA = vertexA;
+        this.vertexB = vertexB;
+        this.vertexC = vertexC;
+        this.vertexA.observers.push( this );
+        this.vertexB.observers.push( this );
+        this.vertexC.observers.push( this );
+        this.widget = new TriangleConnectionWidget( this );
+        this.updateUI();    
+        this.observer.onTriangleAdded( this );
+    }
+    TriangleModel.prototype.destroy = function()
+    {
+        this.vertexA.observers = erasedFromArray( this.vertexA.observers, this );
+        this.vertexB.observers = erasedFromArray( this.vertexB.observers, this );
+        this.vertexC.observers = erasedFromArray( this.vertexC.observers, this );
+        this.widget.hide();
+        this.widget = null;
+        this.observer.onTriangleDeleted( this );        
+        this.vertexA = null;
+        this.vertexB = null;
+        this.vertexC = null;
+        this.observer = null;
+    }
+    TriangleModel.prototype.onVertexMoved = function( vertex )
+    {
+        this.updateUI();
+    }
+    TriangleModel.prototype.doubleArea = function()
+    {
+        var x0 = this.vertexB.pos.x - this.vertexA.pos.x;
+        var y0 = this.vertexB.pos.y - this.vertexA.pos.y;
+        var x1 = this.vertexC.pos.x - this.vertexA.pos.x;
+        var y1 = this.vertexC.pos.y - this.vertexA.pos.y;
+        return Math.abs( x0*y1 - x1*y0 );
+    }
+    TriangleModel.prototype.updateUI = function()
+    {       
+        var posA = lattice.toSVGSpace( this.vertexA.pos );
+        var posB = lattice.toSVGSpace( this.vertexB.pos );
+        var posC = lattice.toSVGSpace( this.vertexC.pos );
+        this.widget.setABC( posA, posB, posC );
+        this.widget.setDoubleArea( this.doubleArea() );
+    }
+    TriangleModel.prototype.onClick = function( evt )
+    {
+        this.observer.onClickTriangle( this );
+    }   
+    TriangleModel.prototype.setSelected = function( isSelected )
+    {
+        this.widget.setSelected( isSelected );
+    }
+    TriangleModel.prototype.replaceVertexWith = function( vertexOld, vertexNew )
+    {
+        if ( this.vertexA === vertexOld ) this.vertexA = vertexNew;
+        if ( this.vertexB === vertexOld ) this.vertexB = vertexNew;
+        if ( this.vertexC === vertexOld ) this.vertexC = vertexNew;
+    }
+    TriangleModel.prototype.equals = function( triangle )
+    {
+        return same3( this.vertexA, this.vertexB, this.vertexC, triangle.vertexA, triangle.vertexB, triangle.vertexC );
+    }
+    TriangleModel.prototype.isDegenerate = function()
+    {
+        return this.vertexA == this.vertexB
+            || this.vertexB == this.vertexC
+            || this.vertexC == this.vertexA;
+    }
+    TriangleModel.prototype.str = function()
+    {
+        return this.vertexA.str() + ":" + this.vertexB.str() + ":" + this.vertexC.str();
+    }
+    
+    
+    
+    function Controller()
+    {
+        lattice = new Lattice();
+        
+        // create SVG groups for correct Z-ordering
+        vertexGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");  
+        lineGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");    
+        triangleGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        areaLabelGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");   
+        svg.appendChild( triangleGroup );   
+        svg.appendChild( lineGroup );
+        svg.appendChild( areaLabelGroup );
+        svg.appendChild( vertexGroup );
+                
+        this.latticeWidget = new LatticeWidget( lattice );      
+        this.vertices = [];
+        this.lines = [];
+        this.triangles = [];
+        this.selection = [];
+        this.dragObject = null;
+        this.mouseDownWasAlreadyHandled = false;
+        
+        var vertexA = new VertexModel( this, new XY( 1, 0 ) );
+        var vertexB = new VertexModel( this, new XY( 4, 3 ) );
+        var vertexC = new VertexModel( this, new XY( 0, 5 ) );
+        new LineModel( this, vertexA, vertexB );
+        new LineModel( this, vertexB, vertexC );
+        new LineModel( this, vertexC, vertexA );
+        new TriangleModel( this, vertexA, vertexB, vertexC );
+    }
+    Controller.prototype.onVertexAdded      = function( vertex )    { this.vertices.push( vertex ); }
+    Controller.prototype.onLineAdded        = function( line )      { this.lines.push( line ); }
+    Controller.prototype.onTriangleAdded    = function( triangle )  { this.triangles.push( triangle ); }
+    Controller.prototype.onVertexDeleted    = function( vertex )    { this.vertices  = erasedFromArray( this.vertices , vertex ); }
+    Controller.prototype.onLineDeleted      = function( line )      { this.lines     = erasedFromArray( this.lines    , line ); }
+    Controller.prototype.onTriangleDeleted  = function( triangle )  { this.triangles = erasedFromArray( this.triangles, triangle ); }
+    Controller.prototype.onDragBegin = function( vertex )
+    {
+        this.dragObject = vertex;       
+        
+        this.setSelection( [vertex] );
+    }
+    Controller.prototype.onDragEnd = function( vertex )
+    {
+        this.mergeIfOverlappingAnotherVertex( vertex );
+    
+        this.dragObject = null;
+    }   
+    Controller.prototype.onBeginDragLine = function( lineModel, evt )
+    {       
+        var newVertex = new VertexModel( this, new XY( 0, 0 ) );
+        
+        var lineA = new LineModel( this, lineModel.vertexA, newVertex );
+        var lineB = new LineModel( this, lineModel.vertexB, newVertex );
+        
+        var newTriangle = new TriangleModel( this, lineModel.vertexA, lineModel.vertexB, newVertex );
+                
+        this.dragObject = newVertex;
+        this.setSelection( [newVertex] );
+        this.onMouseMove( evt );
+    }
+    Controller.prototype.onClickTriangle = function( triangle )
+    {
+        this.mouseDownWasAlreadyHandled = true; // so that our "global" mousedown doesn't trigger
+        this.setSelection( [triangle] );
+    }
+    Controller.prototype.setSelection = function( selection )
+    {
+        for ( var i = 0; i < this.selection.length; i++ )
+            this.selection[i].setSelected( false );
+            
+        this.selection = selection;
+        
+        for ( var i = 0; i < this.selection.length; i++ )
+            this.selection[i].setSelected( true );
+    }   
+    Controller.prototype.mergeIfOverlappingAnotherVertex = function( vertex )
+    {
+        for ( var i = 0; i < this.vertices.length; i++ )
+            if ( !(vertex === this.vertices[i]) && this.vertices[i].pos.equals( vertex.pos ) )
+                this.merge( vertex, this.vertices[i] );
+    }
+    Controller.prototype.isDuplicateLine = function( line )
+    {       
+        for ( var i = 0; i < this.lines.length; i++ ) if ( !(this.lines[i] === line) )
+            if ( this.lines[i].equals( line ) )
+                return true;
+        return false;
+    }
+    Controller.prototype.isDuplicateTriangle = function( triangle )
+    {       
+        for ( var i = 0; i < this.triangles.length; i++ ) if ( !(this.triangles[i] === triangle) )
+            if ( this.triangles[i].equals( triangle ) )
+                return true;
+        return false;
+    }   
+    Controller.prototype.isDuplicate = function( obj )
+    {
+        return ( obj instanceof LineModel )     && this.isDuplicateLine( obj )
+            || ( obj instanceof TriangleModel ) && this.isDuplicateTriangle( obj );
+    }
+    Controller.prototype.merge = function( vertexA, vertexB )
+    {
+        this.setSelection( [] );
+    
+        if ( !vertexA.pos.equals( vertexB.pos ) )
+            console.info( "merge error!" );
+            
+        console.info( "merging" );
+            
+        for ( var i = 0; i < vertexB.observers.length; i++ )
+        {
+            var obj = vertexB.observers[i];
+            obj.replaceVertexWith( vertexB, vertexA );  // replace B with A for all lines & triangles
+            if ( obj.isDegenerate() || this.isDuplicate( obj ) )
+            {
+                obj.destroy();
+                continue;
+            }
+            
+            vertexA.observers.push( vertexB.observers[i] );             // and transfer observers
+        }
+        vertexB.destroy();
+        
+        this.deleteVertexIfOrphan( vertexA );
+        
+        //console.info("#vertices="+this.vertices.length);
+        //console.info("#lines="+this.lines.length);
+        //console.info("#triangles="+this.triangles.length);
+        //for ( var i = 0; i < this.vertices.length; i++ )
+        //  console.info("#obs="+this.vertices[i].observers.length);
+    }
+    Controller.prototype.lineWith = function( vertexA, vertexB )
+    {       
+        for ( var i = 0; i < this.lines.length; i++ )
+            if ( same2( this.lines[i].vertexA, this.lines[i].vertexB, vertexA, vertexB ) )
+                return this.lines[i];
+        return null;
+    }
+    Controller.prototype.trianglesWith2 = function( vertexA, vertexB )
+    {       
+        var ret = [];
+        for ( var i = 0; i < this.triangles.length; i++ )
+            if ( same2( this.triangles[i].vertexA, this.triangles[i].vertexB, vertexA, vertexB )
               || same2( this.triangles[i].vertexB, this.triangles[i].vertexC, vertexA, vertexB )
               || same2( this.triangles[i].vertexC, this.triangles[i].vertexA, vertexA, vertexB ) )
-				ret.push( this.triangles[i] );
-		return ret;
-	}
-	Controller.prototype.trianglesWithLine = function( line )
-	{		
-		return this.trianglesWith2( line.vertexA, line.vertexB );
-	}
-	Controller.prototype.trianglesWithVertex = function( vertex )
-	{		
-		var ret = [];
-		for ( var i = 0; i < this.triangles.length; i++ )
-			if ( vertex == this.triangles[i].vertexA
+                ret.push( this.triangles[i] );
+        return ret;
+    }
+    Controller.prototype.trianglesWithLine = function( line )
+    {       
+        return this.trianglesWith2( line.vertexA, line.vertexB );
+    }
+    Controller.prototype.trianglesWithVertex = function( vertex )
+    {       
+        var ret = [];
+        for ( var i = 0; i < this.triangles.length; i++ )
+            if ( vertex == this.triangles[i].vertexA
               || vertex == this.triangles[i].vertexB
               || vertex == this.triangles[i].vertexC )
-				ret.push( this.triangles[i] );
-		return ret;
-	}
-	Controller.prototype.linesWithVertex = function( vertex )
-	{		
-		var ret = [];
-		for ( var i = 0; i < this.lines.length; i++ )
-			if ( vertex == this.lines[i].vertexA
+                ret.push( this.triangles[i] );
+        return ret;
+    }
+    Controller.prototype.linesWithVertex = function( vertex )
+    {       
+        var ret = [];
+        for ( var i = 0; i < this.lines.length; i++ )
+            if ( vertex == this.lines[i].vertexA
               || vertex == this.lines[i].vertexB )
-				ret.push( this.lines[i] );
-		return ret;
-	}
-	Controller.prototype.deleteTriangleAndOrphans = function( triangle )
-	{
-		var vertexA = triangle.vertexA;
-		var vertexB = triangle.vertexB;
-		var vertexC = triangle.vertexC;
-		triangle.destroy();
-		
-		// delete orphaned lines
-		var lines = [ this.lineWith( vertexA, vertexB )
-					, this.lineWith( vertexB, vertexC )
-					, this.lineWith( vertexC, vertexA ) ];					
-		for ( var i = 0; i < 3; i++ )
-			if ( this.trianglesWithLine( lines[i] ).length == 0 )
-				lines[i].destroy();
-		
-		// delete orphaned vertices
-		this.deleteVertexIfOrphan( vertexA );
-		this.deleteVertexIfOrphan( vertexB );
-		this.deleteVertexIfOrphan( vertexC );
-	}
-	Controller.prototype.deleteVertexIfOrphan = function( vertex )
-	{		
-		if ( this.linesWithVertex( vertex ).length == 0 )
-			vertex.destroy();
-	}
-	Controller.prototype.deleteVertexAndOrphans = function( vertex )
-	{
-		// delete adjacent triangles
-		var triangles = this.trianglesWithVertex( vertex );
-		for ( var i = 0; i < triangles.length; i++ )
-			this.deleteTriangleAndOrphans( triangles[i] );
-			
-		// delete orphaned lines
-		var lines = this.linesWithVertex( vertex );		
-		for ( var i = 0; i < lines.length; i++ )
-		{
-			var theOtherVertex = vertex == lines[i].vertexA ? lines[i].vertexB : lines[i].vertexA;			
-			lines[i].destroy();
-			this.deleteVertexIfOrphan( theOtherVertex );
-		}
-		
-		var vertexStillAlive = vertex.widget != null;
-		if ( vertexStillAlive ) // 
-			vertex.destroy();			
-	}
-	Controller.prototype.deleteObjectAndOrphans = function( obj )
-	{
-		if ( obj instanceof VertexModel )   this.deleteVertexAndOrphans( obj );
-		if ( obj instanceof TriangleModel ) this.deleteTriangleAndOrphans( obj );
-	}
-	Controller.prototype.deleteKeyPressed = function()
-	{
-		var selection = this.selection.slice( 0 ); // copy array;
-		this.setSelection( [] );		
-		for ( var i = 0; i < selection.length; i++ )
-			this.deleteObjectAndOrphans( selection[i] );
-	}
-	
-	Controller.prototype.onMouseUp = function( evt )
-	{
-		this.mouseDownWasAlreadyHandled = false; // (reset the state variable)
-		if ( this.dragObject )
-		{
-			this.dragObject.onDragEnd();
-			this.dragObject = null;
-		}
-	}	
-	Controller.prototype.onMouseMove = function( evt )
-	{
-		if ( this.dragObject )
-		{
-			this.dragObject.onDrag( evtToSVGSpace( evt ) );
-		}
-	}
-	Controller.prototype.onKeyPress = function( evt ) {}
-	Controller.prototype.onKeyDown = function( evt )
-	{		
-		if ( evt.keyCode == 46 ) 
-			controller.deleteKeyPressed();
-	}
-	Controller.prototype.onMouseDown = function( evt )
-	{
-		if ( this.mouseDownWasAlreadyHandled || this.dragObject )
-			return;
-				
-		var vertexA = new VertexModel( this, lattice.toNearestLatticePoint( evtToSVGSpace( evt ) ) );
-		var vertexB = new VertexModel( this, lattice.toNearestLatticePoint( evtToSVGSpace( evt ) ) );
-		var line = new LineModel( this, vertexA, vertexB );
-		this.dragObject = vertexB;
-		this.setSelection( [vertexB] );
-	}
-	Controller.prototype.setN = function( n )
-	{
-		console.info( "set N=" + n );
-		lattice.setN( n );
-		
-		for ( var i = 0; i < this.vertices.length ; i++ ) this.vertices[i].updateUI();
-		for ( var i = 0; i < this.lines.length    ; i++ ) this.lines[i].updateUI();
-		for ( var i = 0; i < this.triangles.length; i++ ) this.triangles[i].updateUI();
-		this.latticeWidget.updateUI();
-	}
-	Controller.prototype.getTrianglesText = function()
-	{
-		var ret = "";		
-		for ( var i = 0; i < this.triangles.length; i++ ) 
-			ret += (i?"; ":"") + this.triangles[i].str();
-		return ret;
-	}
-	
-    		    
+                ret.push( this.lines[i] );
+        return ret;
+    }
+    Controller.prototype.deleteTriangleAndOrphans = function( triangle )
+    {
+        var vertexA = triangle.vertexA;
+        var vertexB = triangle.vertexB;
+        var vertexC = triangle.vertexC;
+        triangle.destroy();
+        
+        // delete orphaned lines
+        var lines = [ this.lineWith( vertexA, vertexB )
+                    , this.lineWith( vertexB, vertexC )
+                    , this.lineWith( vertexC, vertexA ) ];                  
+        for ( var i = 0; i < 3; i++ )
+            if ( this.trianglesWithLine( lines[i] ).length == 0 )
+                lines[i].destroy();
+        
+        // delete orphaned vertices
+        this.deleteVertexIfOrphan( vertexA );
+        this.deleteVertexIfOrphan( vertexB );
+        this.deleteVertexIfOrphan( vertexC );
+    }
+    Controller.prototype.deleteVertexIfOrphan = function( vertex )
+    {       
+        if ( this.linesWithVertex( vertex ).length == 0 )
+            vertex.destroy();
+    }
+    Controller.prototype.deleteVertexAndOrphans = function( vertex )
+    {
+        // delete adjacent triangles
+        var triangles = this.trianglesWithVertex( vertex );
+        for ( var i = 0; i < triangles.length; i++ )
+            this.deleteTriangleAndOrphans( triangles[i] );
+            
+        // delete orphaned lines
+        var lines = this.linesWithVertex( vertex );     
+        for ( var i = 0; i < lines.length; i++ )
+        {
+            var theOtherVertex = vertex == lines[i].vertexA ? lines[i].vertexB : lines[i].vertexA;          
+            lines[i].destroy();
+            this.deleteVertexIfOrphan( theOtherVertex );
+        }
+        
+        var vertexStillAlive = vertex.widget != null;
+        if ( vertexStillAlive ) // 
+            vertex.destroy();           
+    }
+    Controller.prototype.deleteObjectAndOrphans = function( obj )
+    {
+        if ( obj instanceof VertexModel )   this.deleteVertexAndOrphans( obj );
+        if ( obj instanceof TriangleModel ) this.deleteTriangleAndOrphans( obj );
+    }
+    Controller.prototype.deleteKeyPressed = function()
+    {
+        var selection = this.selection.slice( 0 ); // copy array;
+        this.setSelection( [] );        
+        for ( var i = 0; i < selection.length; i++ )
+            this.deleteObjectAndOrphans( selection[i] );
+    }
+    
+    Controller.prototype.onMouseUp = function( evt )
+    {
+        this.mouseDownWasAlreadyHandled = false; // (reset the state variable)
+        if ( this.dragObject )
+        {
+            this.dragObject.onDragEnd();
+            this.dragObject = null;
+        }
+    }   
+    Controller.prototype.onMouseMove = function( evt )
+    {
+        if ( this.dragObject )
+        {
+            this.dragObject.onDrag( evtToSVGSpace( evt ) );
+        }
+    }
+    Controller.prototype.onKeyPress = function( evt ) {}
+    Controller.prototype.onKeyDown = function( evt )
+    {       
+        if ( evt.keyCode == 46 ) 
+            controller.deleteKeyPressed();
+    }
+    Controller.prototype.onMouseDown = function( evt )
+    {
+        if ( this.mouseDownWasAlreadyHandled || this.dragObject )
+            return;
+                
+        var vertexA = new VertexModel( this, lattice.toNearestLatticePoint( evtToSVGSpace( evt ) ) );
+        var vertexB = new VertexModel( this, lattice.toNearestLatticePoint( evtToSVGSpace( evt ) ) );
+        var line = new LineModel( this, vertexA, vertexB );
+        this.dragObject = vertexB;
+        this.setSelection( [vertexB] );
+    }
+    Controller.prototype.setN = function( n )
+    {
+        console.info( "set N=" + n );
+        lattice.setN( n );
+        
+        for ( var i = 0; i < this.vertices.length ; i++ ) this.vertices[i].updateUI();
+        for ( var i = 0; i < this.lines.length    ; i++ ) this.lines[i].updateUI();
+        for ( var i = 0; i < this.triangles.length; i++ ) this.triangles[i].updateUI();
+        this.latticeWidget.updateUI();
+    }
+    Controller.prototype.getTrianglesText = function()
+    {
+        var ret = "";       
+        for ( var i = 0; i < this.triangles.length; i++ ) 
+            ret += (i?"; ":"") + this.triangles[i].str();
+        return ret;
+    }
+    
+                
     function onLoad() 
-	{	
-		controller = new Controller();	
+    {   
+        controller = new Controller();  
 
-		svg.onmousedown = function( evt ) { controller.onMouseDown( evt ); }
-		svg.onmouseup   = function( evt ) { controller.onMouseUp( evt ); }
-		svg.onmousemove = function( evt ) { controller.onMouseMove( evt ); }
-		document.body.onkeypress  = function( evt ) { controller.onKeyPress( evt ); }
-		document.body.onkeydown   = function( evt ) { controller.onKeyDown( evt ); }	
+        svg.onmousedown = function( evt ) { controller.onMouseDown( evt ); }
+        svg.onmouseup   = function( evt ) { controller.onMouseUp( evt ); }
+        svg.onmousemove = function( evt ) { controller.onMouseMove( evt ); }
+        document.body.onkeypress  = function( evt ) { controller.onKeyPress( evt ); }
+        document.body.onkeydown   = function( evt ) { controller.onKeyDown( evt ); }    
     }
 
 </script>
